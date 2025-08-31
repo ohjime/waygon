@@ -4,40 +4,92 @@ NC="'\033[0m'"
 env:
 ifdef for
 ifeq ($(for),macos)
-	@echo "Installing Development Dependencies for MacOS"
-	@echo "\nInstalling Homebrew...\n"
+	@reset
+	@printf "\033[1;4;34m\nInstalling Project Enviornment for MacOS M1\033[0m\n"
+	@printf "\033[1;4;34m\n1. Installing Homebrew...\n\033[0m\n"
 	@/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" || true
 	@brew update || true
-	@echo "\nAdding Homebrew to PATH...\n"
+	@printf "\033[1;4;34m\n2. Adding Homebrew to PATH...\n\033[0m\n"
 	@export PATH="/usr/local/bin:$PATH"
-	@echo "\nInstalling npm...\n"
+	@echo '/usr/local/bin added to PATH'
+	@printf "\033[1;4;34m\n3. Installing npm...\n\033[0m\n"
 	@brew install npm || true
-	@echo "\nInstalling uv...\n"
+	@npm update || true
+	@printf "\033[1;4;34m\n4. Installing uv...\n\033[0m\n"
 	@brew install uv || true
-	@echo "\nInstalling PostgreSQL...\n"
+	@printf "\033[1;4;34m\n5. Installing PostgreSQL...\n\033[0m\n"
 	@brew install postgresql || true
-	@echo "\nStarting PostgreSQL service...\n"
-	@brew services start postgresql || true
-	@echo "\nInstalling PostGIS...\n"
+	@printf "\033[1;4;34m\n6. Starting PostgreSQL service...\n\033[0m\n"
+	@brew services restart postgresql || true
+	@printf "\033[1;4;34m\n7. Installing PostGIS...\n\033[0m\n"
 	@brew install postgis || true
-	@echo "\nInstalling GDAL, PROJ, and GEOS...\n"
+	@printf "\033[1;4;34m\n8. Installing GDAL, PROJ, and GEOS...\n\033[0m\n"
 	@brew install gdal proj geos || true
-	@echo "\nMacOS Development Environment Setup Complete\n"
+	@printf "\033[1;4;34m\n8. Initializing Xcode...\n\033[0m\n"
+	@sudo sh -c 'xcode-select -s /Applications/Xcode.app/Contents/Developer && xcodebuild -runFirstLaunch' || true
+	@echo "Xcode Initialized"
+	@printf "\033[1;4;34m\n8. Installing Xcode CLI Tools...\n\033[0m\n"
+	@xcode-select --install || true
+	@printf "\033[1;4;34m\n8. Accepting Xcode Agreements...\n\033[0m\n"
+	@sudo xcodebuild -license accept || true
+	@echo "Xcode Agreements have been Accepted"
+	@printf "\033[1;4;34m\n9. Installing Firebase CLI...\n\033[0m"
+	@npm install -g firebase-tools --loglevel=error || true
+	@printf "\033[1;4;34m\nMacOS Development Environment Setup Complete\n\033[0m\n"
 else
-	@echo "\n'${for}' is not a recognized platform\n"
-	@echo "Supported platforms are:\n1. macos\n2. linux\n3. windows"
+	@printf "\033[1;4;34m\n'${for}' is not a recognized platform\n\033[0m\n"
+	@printf "\033[1;4;34mSupported platforms are:\n1. macos\n2. linux\n3. windows\033[0m\n"
 endif
 else
-	@echo "\n No platform specified. Supported platforms are:"
-	@echo "\n\t1. macos\n\t2. linux\n\t3. windows"
-	@echo "\n Please re-run your command with an appropriate platform flag. For example:\n"
-	@echo ">>> make dependencies for=macos\n"
+	@printf "\033[1;4;34m\n No platform specified. Supported platforms are:\033[0m\n"
+	@printf "\033[1;4;34m\n\t1. macos\n\t2. linux\n\t3. windows\033[0m\n"
+	@printf "\033[1;4;34m\n Please re-run your command with an appropriate platform flag. For example:\n\033[0m\n"
+	@printf "\033[1;4;34m>>> make env for=macos\n\033[0m\n"
 endif
 
 doc:
 	@echo "Starting Documentation Server...\n"
 	@cd docs \
 		&& npm start
+
+mobile:
+ifdef for
+ifeq ($(for),ios)
+	@printf "\033[1;4;34m\nBuilding Mobile Application for iOS\033[0m\n"
+	@printf "\033[1;4;34m\n1. Cleaning Previous Builds...\033[0m\n\n"
+	@cd src/mobile/ios \
+		&& flutter clean
+	@printf "\033[1;4;34m\n2. Fetching Flutter and Dart Packages...\033[0m\n\n"
+	@cd src/mobile/ \
+		&& flutter pub get \
+		&& dart pub get
+	@printf "\033[1;4;34m\n3. Configuring Flutter for iOS...\033[0m\n\n"
+	@cd src/mobile/ \
+		&& flutter config --no-enable-android \
+		&& flutter config --enable-ios
+	@printf "\033[1;4;34m\n4. Updating CocoaPods repo and installing pods...\033[0m\n\n"
+	@cd src/mobile/ios \
+		&& pod repo update \
+		&& pod install
+	@printf "\033[1;4;34m\n5. Activating FlutterFire...\033[0m\n\n"
+	@cd src/mobile/ \
+		&& dart pub global activate flutterfire_cli
+	@printf "\033[1;4;34m\n6. Starting FlutterFire Configuration Setup...\033[0m\n\n"
+	@cd src/mobile/ \
+		&& flutterfire configure
+	@printf "\033[1;4;34m\n7. Building Mobile for iOS (Grab a Coffee this will take a while)...\033[0m\n\n"
+	@cd src/mobile/ \
+		&& flutter run
+else
+	@printf "\033[1;4;34m\n'${for}' is not a recognized platform\n\033[0m\n"
+	@printf "\033[1;4;34mSupported platforms are:\n1. ios\n2. android\n"
+endif
+else
+	@printf "\033[1;4;34m\n No platform specified. Supported platforms are:\033[0m\n"
+	@printf "\033[1;4;34m\n\t1. ios\n\t2. android\n"
+	@printf "\033[1;4;34m\n Please re-run your command with an appropriate platform flag. For example:\n\033[0m\n"
+	@printf "\033[1;4;34m>>> make mobile for=ios\n\033[0m\n"
+endif
 
 server:
 ifdef run
@@ -96,8 +148,8 @@ db:
 data:
 	@echo "Generating mock server data...\n"
 	@cd src/server \
-		&& WAGON_SKIP_GOOGLE=1 printf "from core.fake import generate\ngenerate(40)\n" | uv run lib/main.py shell
-	
+		&& WAGON_SKIP_GOOGLE=1 printf "from core.fake import generate\ngenerate(10)\n" | uv run lib/main.py shell
+
 clean:
 	@echo "${RED}Cleaning Server${NC}..."
 	@echo "Deleting __pycache__ directories"
