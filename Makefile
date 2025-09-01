@@ -1,47 +1,50 @@
 RED="'\033[0;31m'"
 NC="'\033[0m'"
 
+
 env:
 ifdef for
 ifeq ($(for),macos)
 	@reset
 	@printf "\033[1;4;34m\nInstalling Project Enviornment for MacOS M1\033[0m\n"
-	@printf "\033[1;4;34m\n1. Installing Homebrew...\n\033[0m\n"
-	@/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" || true
+	@printf "\033[1;4;34m\n1. Updating Homebrew...\n\033[0m\n"
 	@brew update || true
-	@printf "\033[1;4;34m\n2. Adding Homebrew to PATH...\n\033[0m\n"
-	@export PATH="/usr/local/bin:$PATH"
-	@echo '/usr/local/bin added to PATH'
-	@printf "\033[1;4;34m\n3. Installing npm...\n\033[0m\n"
+	@printf "\033[1;4;34m\n3. Installing npm via brew...\n\033[0m\n"
 	@brew install npm || true
-	@printf "\033[1;4;34m\n4. Updating npm globally...\n\033[0m"
+	@printf "\033[1;4;34m\n4. Updating brew installed npm globally...\n\033[0m"
 	@npm install -g npm@latest || true
-	@printf "\033[1;4;34m\n5. Installing dotenv-cli globally with npm...\n\033[0m"
+	@printf "\033[1;4;34m\n5. Installing dotenv-cli globally via brew installed npm...\n\033[0m"
 	@npm install -g dotenv-cli || true
-	@printf "\033[1;4;34m\n6. Installing uv...\n\033[0m\n"
+	@printf "\033[1;4;34m\n6. Installing uv via Homebrew...\n\033[0m\n"
 	@brew install uv || true
-	@printf "\033[1;4;34m\n7. Installing PostgreSQL...\n\033[0m\n"
+	@printf "\033[1;4;34m\n7. Installing PostgreSQL via Homebrew...\n\033[0m\n"
 	@brew install postgresql || true
-	@printf "\033[1;4;34m\n8. Starting PostgreSQL service...\n\033[0m\n"
+	@printf "\033[1;4;34m\n8. Starting PostgreSQL service via Homebrew...\n\033[0m\n"
 	@brew services restart postgresql || true
-	@printf "\033[1;4;34m\n9. Installing PostGIS...\n\033[0m\n"
+	@printf "\033[1;4;34m\n9. Installing PostGIS via Homebrew...\n\033[0m\n"
 	@brew install postgis || true
-	@printf "\033[1;4;34m\n10. Installing GDAL, PROJ, and GEOS...\n\033[0m\n"
+	@printf "\033[1;4;34m\n11. Installing GDAL, PROJ, and GEOS via Homebrew...\n\033[0m\n"
 	@brew install gdal proj geos || true
-	@printf "\033[1;4;34m\n11. Initializing Xcode...\n\033[0m\n"
+	@printf "\033[1;4;34m\n12. Installing Ruby via Homebrew...\n\033[0m\n"
+	@brew install ruby || true
+	@printf "\033[1;4;34m\n13. Adding brew installed Ruby to front of PATH...\n\033[0m\n"
+	@echo 'export PATH="/opt/homebrew/opt/ruby/bin:$$PATH"' >> ~/.zshrc 
+	@echo '/opt/homebrew/opt/ruby/bin added to PATH'
+	@printf "\033[1;4;34m\n14. Installing cocoapods via brew installed Ruby...\n\033[0m\n"
+	@/opt/homebrew/opt/ruby/bin/gem install cocoapods || true
+	@printf "\033[1;4;34m\n15. Initializing Xcode...\n\033[0m\n"
 	@sudo sh -c 'xcode-select -s /Applications/Xcode.app/Contents/Developer && xcodebuild -runFirstLaunch' || true
 	@echo "Xcode Initialized"
-	@printf "\033[1;4;34m\n12. Installing Xcode CLI Tools...\n\033[0m\n"
+	@printf "\033[1;4;34m\n16. Installing Xcode CLI Tools...\n\033[0m\n"
 	@xcode-select --install || true
-	@printf "\033[1;4;34m\n13. Accepting Xcode Agreements...\n\033[0m\n"
+	@printf "\033[1;4;34m\n17. Accepting Xcode Agreements...\n\033[0m\n"
 	@sudo xcodebuild -license accept || true
 	@echo "Xcode Agreements have been Accepted"
-	@printf "\033[1;4;34m\n14. Installing Firebase CLI...\n\033[0m"
+	@printf "\033[1;4;34m\n18. Installing Firebase CLI...\n\033[0m"
 	@npm install -g firebase-tools --loglevel=error || true
-	@printf "\033[1;4;34m\n15. Logging into Firebase...\n\033[0m\n"
+	@printf "\033[1;4;34m\n19. Logging into Firebase...\n\033[0m\n"
 	@firebase login || true
-	
-	@printf "\033[1;4;34m\n16. Installing Flutter SDK to $HOME/flutter and updating PATH...\n\033[0m\n"
+	@printf "\033[1;4;34m\n20. Installing Flutter SDK to $$HOME/flutter and updating PATH...\n\033[0m\n"
 	@FLUTTER_DIR="$$HOME/flutter"; \
 	if [ -d "$$FLUTTER_DIR/.git" ]; then \
 	  echo "Flutter already installed at $$FLUTTER_DIR"; \
@@ -55,11 +58,28 @@ ifeq ($(for),macos)
 	grep -qxF "$$LINE" "$$ZSHRC" 2>/dev/null || echo "$$LINE" >> "$$ZSHRC"; \
 	echo "Ensured Flutter is on PATH in $$ZSHRC"; \
 	/bin/zsh -lc 'flutter --version || $$HOME/flutter/bin/flutter --version' || true
-
-	@printf "\033[1;4;34m\n17. Installing Flutter VSCode Extensions...\n\033[0m\n"
+	@printf "\033[1;4;34m\n21. Installing Workplace VSCode Extensions...\n\033[0m\n"
 	@code --install-extension Dart-Code.flutter || true
+	@code --install-extension adrianwilczynski.alpine-js-intellisense || true
+	@code --install-extension felixangelov.bloc || true
+	@code --install-extension openai.chatgpt || true
+	@code --install-extension mrniamster.daisyui-snippets || true
+	@code --install-extension bibhasdn.django-html || true
+	@code --install-extension monosans.djlint || true
+	@code --install-extension mileskies.docusaurus-mdx-previewer || true
+	@code --install-extension github.copilot || true
+	@code --install-extension ecmel.vscode-html-css || true
+	@code --install-extension craigrbroughton.htmx-attributes || true
+	@code --install-extension unifiedjs.vscode-mdx || true
+	@code --install-extension ms-python.vscode-pylance || true
+	@code --install-extension ms-python.vscode-python-envs || true
+	@code --install-extension rbalet.vscode-sorting-attrs || true
+	@code --install-extension bradlc.vscode-tailwindcss || true
+	@code --install-extension shardulm94.trailing-spaces || true
+	@code --install-extension davidanson.vscode-markdownlint || true
+	@code --install-extension dart-code.dart-code || true
+	@code --install-extension ms-python.debugpy || true
 	@printf "\033[1;4;34m\nMacOS Development Environment Setup Complete\n\033[0m\n"
-
 else
 	@printf "\033[1;4;34m\n'${for}' is not a recognized platform\n\033[0m\n"
 	@printf "\033[1;4;34mSupported platforms are:\n1. macos\n2. linux\n3. windows\033[0m\n"
