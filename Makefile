@@ -35,9 +35,13 @@ ifeq ($(for),macos)
 	@printf "\033[1;4;34m\n17. Accepting Xcode Agreements...\n\033[0m\n"
 	@sudo xcodebuild -license accept || true
 	@echo "Xcode Agreements have been Accepted"
+	@printf "\033[1;4;34m\n17. Adding Xcodeproj Command via ruby...\n\033[0m\n"
+	@sudo gem install xcodeproj || true
+	@echo "Xcodeproj has been added"
 	@printf "\033[1;4;34m\n18. Installing Firebase CLI...\n\033[0m"
 	@npm install -g firebase-tools --loglevel=error || true
 	@printf "\033[1;4;34m\n19. Logging into Firebase...\n\033[0m\n"
+	@firebase logout || true
 	@firebase login || true
 	@printf "\033[1;4;34m\n20. Installing Flutter SDK to $$HOME/flutter and updating PATH...\n\033[0m\n"
 	@FLUTTER_DIR="$$HOME/flutter"; \
