@@ -1,5 +1,6 @@
 from django_tables2 import tables
 from trip.models import Trip
+from core.models import Account
 
 
 class TripTable(tables.Table):
@@ -18,3 +19,11 @@ class TripTable(tables.Table):
         )
         template_name = "dispatch/trips/partials/table.html"
         attrs = {"class": "table table-pin-rows table-pin-cols !p-0"}
+
+
+class AccountTable(tables.Table):
+
+    class Meta:
+        model = Account
+        template_name = "django_tables2/bootstrap.html"
+        fields = ("uid",)

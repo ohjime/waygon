@@ -1,0 +1,38 @@
+{% extends "dispatch/base.html" %}
+{% load partials %}
+{% startpartial account-item %}
+<li class="list-row">
+    {{ account.first_name }} {{ account.last_name }}
+</li>
+{% endpartial %}
+{% block content %}
+    <div class="flex flex-row">
+        {% comment %} Account Form {% endcomment %}
+        <div class="flex flex-col">
+            <h2>
+                Add a Account
+            </h2>
+            <form hx-post="{% url 'account_index' %}"
+                  hx-swap="beforeend"
+                  hx-target="#account-list">
+                {{ form.as_div }}
+                <button type="submit"
+                        class="btn btn-primary mt-2">
+                    Submit
+                </button>
+            </form>
+        </div>
+        {% comment %} Account List {% endcomment %}
+        <div class="flex flex-col">
+            <h2>
+                Account List
+            </h2>
+            <ul class="list bg-base-100 rounded-box shadow-md"
+                id="account-list">
+                {% for account in accounts %}
+                    {% partial account-item %}
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+{% endblock content %}

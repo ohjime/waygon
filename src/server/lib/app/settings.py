@@ -2,6 +2,7 @@ import os
 import platform
 from pathlib import Path
 from dotenv import load_dotenv
+from template_partials.apps import wrap_loaders
 
 os.environ["DJANGO_RUNSERVER_HIDE_WARNING"] = "true"
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -35,6 +36,7 @@ INSTALLED_APPS = [
     "core",
     "trip",
     "dispatch",
+    "template_partials",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -75,6 +77,7 @@ TEMPLATES = [
         },
     },
 ]
+wrap_loaders("django")
 WSGI_APPLICATION = "app.wsgi.application"
 DATABASES = {
     "default": {
