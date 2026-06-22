@@ -49,4 +49,11 @@ COPY --from=vite /build/static /app/src/server/vite/static
 RUN uv run --no-sync src/main.py collectstatic --noinput
 
 EXPOSE 8000
-CMD ["/app/bin/runserver_prod.sh"]
+# Default command = web (2 workers). docker-compose overrides `command` for the
+# release (migrate + cache table + admin) and worker (django-tasks) services, and
+# re-specifies web with $WEB_CONCURRENCY workers. Migrations run in `release`, not
+# here, so the image alone never touches the database on start.
+CMD ["uv", "run", "--no-sync", "gunicorn", "config.asgi:application", \
+     "-k", "uvicorn_worker.UvicornWorker", "--bind", "0.0.0.0:8000", \
+     "--workers", "2", "--chdir", "src", \
+     "--access-logfile", "-", "--log-level", "warning"]

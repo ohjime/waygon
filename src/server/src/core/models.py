@@ -19,8 +19,19 @@ class Account(models.Model):
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     email = models.EmailField(max_length=255, unique=True)
-    phone = models.CharField(max_length=255, blank=True, unique=True)
+    # Optional + unique: an empty phone is stored as NULL (not ''), so multiple
+    # accounts can have "no phone" without colliding on the unique constraint
+    # (Postgres allows many NULLs but only one '').
+    phone = models.CharField(
+        max_length=255, blank=True, null=True, unique=True
+    )
     avatar = models.URLField(max_length=255, blank=True)
+
+    def save(self, *args, **kwargs):
+        # Normalize blank phone to NULL so the unique constraint ignores it.
+        if not self.phone:
+            self.phone = None
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.email

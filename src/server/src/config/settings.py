@@ -44,6 +44,7 @@ if DEBUG:
     ALLOWED_HOSTS.extend(
         [
             "localhost",
+            ".localhost",  # wildcard: admin.localhost etc. for testing subdomain routing
             "127.0.0.1",
             "0.0.0.0",
             "localhost:5173",
@@ -54,15 +55,22 @@ if DEBUG:
         ]
     )
 else:
-    # Comma-separated domains/IPs, e.g. "wagon.example.com,203.0.113.5"
+    # Comma-separated domains/IPs, e.g. "waygon.example.com,203.0.113.5"
     prod_hosts = os.environ.get("PROD_HOSTS", "")
     ALLOWED_HOSTS.extend(h.strip() for h in prod_hosts.split(",") if h.strip())
 
-# CSRF trusted origins (production runs behind Caddy over HTTPS).
+# CSRF trusted origins (production runs behind Caddy over HTTPS). A leading-dot
+# wildcard like ".waygon.dev" expands to BOTH the subdomain wildcard origin and
+# the apex, because Django's CSRF wildcard matches subdomains only.
 CSRF_TRUSTED_ORIGINS = []
 for entry in os.environ.get("PROD_HOSTS", "").split(","):
     entry = entry.strip().rstrip("/")
     if not entry:
+        continue
+    if entry.startswith("."):
+        base = entry.lstrip(".")
+        CSRF_TRUSTED_ORIGINS.append(f"https://*.{base}")
+        CSRF_TRUSTED_ORIGINS.append(f"https://{base}")
         continue
     if "://" not in entry:
         entry = f"https://{entry}"
@@ -136,14 +144,21 @@ INSTALLED_APPS = [
     "widget_tweaks",
     "storages",
     "anymail",
+    "corsheaders",
     # Local apps.
     "core",
     "dashboard",
+    "shell",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # CORS must run before CommonMiddleware so preflight/headers are applied.
+    "corsheaders.middleware.CorsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    # Host-based URLconf switch (admin.* subdomain -> admin at root). Must precede
+    # CommonMiddleware so request.urlconf is set before URL resolution.
+    "config.middleware.SubdomainURLConf",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -158,6 +173,20 @@ MIDDLEWARE = [
 if DEBUG:
     INSTALLED_APPS.append("django_browser_reload")
     MIDDLEWARE.append("django_browser_reload.middleware.BrowserReloadMiddleware")
+
+# CORS — the /api/* endpoints are called by the Flutter web build, which the
+# `flutter run` dev server hosts on a different localhost port (a separate
+# origin). The API authenticates via a Firebase Bearer token (not cookies), so
+# allowing any origin in development is safe; production should restrict this.
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    CORS_ALLOWED_ORIGINS = [
+        o.strip()
+        for o in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
+        if o.strip()
+    ]
+CORS_URLS_REGEX = r"^/api/.*$"
 
 ROOT_URLCONF = "config.urls"
 TEMPLATES = [
@@ -195,7 +224,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 # (e.g. a managed DB), so GeoDjango keeps working.
 DATABASES = {
     "default": dj_database_url.config(
-        default="postgis://admin:changeme@localhost:5432/wagon_db",
+        default="postgis://admin:changeme@localhost:5432/waygon_db",
         conn_max_age=600,
         engine="django.contrib.gis.db.backends.postgis",
     )
@@ -302,12 +331,12 @@ if not DEBUG:
     }
 
 # Email: console in dev / without AWS creds; AWS SES via Anymail when configured.
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@wagon.local")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@waygon.local")
 ANYMAIL = {
     "AMAZON_SES_CLIENT_PARAMS": {
         "aws_access_key_id": AWS_ACCESS_KEY_ID,
         "aws_secret_access_key": AWS_SECRET_ACCESS_KEY,
-        "region_name": os.getenv("AWS_S3_REGION_NAME", "us-east-1"),
+        "region_name": os.getenv("AWS_S3_REGION_NAME", "us-east-2"),
     },
 }
 if DEBUG or not AWS_ACCESS_KEY_ID:
@@ -319,8 +348,8 @@ else:
 # django-unfold admin theme
 # ---------------------------------------------------------------------------
 UNFOLD = {
-    "SITE_TITLE": "Wagon Admin",
-    "SITE_HEADER": "Wagon",
+    "SITE_TITLE": "Waygon Admin",
+    "SITE_HEADER": "Waygon",
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
     "SIDEBAR": {

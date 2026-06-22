@@ -1,0 +1,131 @@
+{% load django_vite %}
+{% load django_htmx %}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>
+            {% block title %}
+                Shell
+            {% endblock title %}
+            | Royal Waygon
+        </title>
+        <meta charset="UTF-8">
+        <meta name="viewport"
+              content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="X-UA-Compatible"
+              content="ie=edge">
+        <meta name="description"
+              content="A Django project using Tailwind CSS.">
+        {% vite_hmr_client %}
+        {% vite_asset 'assets/js/main.js' %}
+        {% django_htmx_script %}
+        <script>
+            // Attach the CSRF token to every htmx request so POST-backed drawer
+            // actions work without per-element wiring.
+            document.addEventListener('htmx:configRequest', (event) => {
+                const cookies = document.cookie.split(';');
+                for (const cookie of cookies) {
+                    const trimmed = cookie.trim();
+                    if (trimmed.startsWith('csrftoken=')) {
+                        event.detail.headers['X-CSRFToken'] = decodeURIComponent(
+                            trimmed.substring('csrftoken='.length));
+                        break;
+                    }
+                }
+            });
+        </script>
+    </head>
+    <body class="font-sans">
+        {% csrf_token %}
+        <!-- Single app-shell navbar (header + collapsing sidebar). The demo
+             destinations become sidebar links; swap_content fires `nav:close`
+             after each swap, which the component listens for to collapse. -->
+        <c-navbar title="Shell"
+                  content_id="app_content">
+            <c-slot name="actions">
+                <!-- Opens the base drawer with random test content -->
+                <button class="btn btn-primary btn-sm"
+                        hx-get="{% url 'shell_open_drawer' %}"
+                        hx-target="#app_drawer_content"
+                        hx-swap="innerHTML">
+                    Open Drawer
+                </button>
+            </c-slot>
+            <c-slot name="nav_items">
+                {% for dest in destinations %}
+                    <li>
+                        <a hx-get="{% url 'shell_swap' %}?name={{ dest.label|urlencode }}"
+                           hx-target="#app_content"
+                           hx-swap="innerHTML"
+                           class="mx-1 flex h-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 transition-color duration-200 hover:bg-base-200 hover:text-base-content">
+                            <span class="flex h-9 w-9 flex-shrink-0 items-center justify-center">
+                                <span class="h-3 w-3 rounded-full {{ dest.color }}"></span>
+                            </span>
+                            <span class="flex-shrink-0 truncate transition-opacity delay-75 duration-200"
+                                  :class="hoverDrawer || toggleDrawer ? 'w-full opacity-100' : 'w-0 opacity-0'">
+                                {{ dest.label }}
+                            </span>
+                        </a>
+                    </li>
+                {% endfor %}
+            </c-slot>
+            {% block content %}
+            {% endblock content %}
+        </c-navbar>
+        <!-- Base drawer: panel stays mounted; show_drawer swaps #app_drawer_content -->
+        <div id="app_drawer"
+             x-data="{ open: false }"
+             @show-drawer.window="open = true"
+             @close-drawer.window="open = false"
+             @keydown.escape.window="open = false">
+            <!-- Backdrop -->
+            <div x-show="open"
+                 x-transition.opacity
+                 class="fixed inset-0 z-[60] bg-black/50"
+                 @click="open = false"
+                 x-cloak>
+            </div>
+            <!-- Sliding panel -->
+            <aside x-show="open"
+                   x-cloak
+                   x-transition:enter="transform transition ease-in-out duration-300"
+                   x-transition:enter-start="translate-x-full"
+                   x-transition:enter-end="translate-x-0"
+                   x-transition:leave="transform transition ease-in-out duration-200"
+                   x-transition:leave-start="translate-x-0"
+                   x-transition:leave-end="translate-x-full"
+                   class="fixed right-0 top-0 bottom-0 z-[70] flex w-full max-w-md flex-col border-l border-base-300 bg-base-100 shadow-2xl"
+                   aria-label="Drawer">
+                <div id="app_drawer_content"
+                     class="flex flex-1 flex-col overflow-hidden">
+                    <!-- show_drawer injects the drawer component here -->
+                </div>
+            </aside>
+        </div>
+        <style>
+            [x-cloak] {
+                display: none !important;
+            }
+
+            /* Entrance animation for content swapped into #app_content. Targets
+               the swapped-in children directly, so the CSS animation re-runs
+               every time htmx inserts fresh markup — no wrapper, and neither the
+               view nor its template has to opt in. */
+            @keyframes content-enter-kf {
+                from {
+                    opacity: 0;
+                    transform: translateX(-10px);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translateX(0);
+                }
+            }
+
+            #app_content>* {
+                animation: content-enter-kf 220ms ease-out both;
+            }
+        </style>
+    </body>
+</html>
