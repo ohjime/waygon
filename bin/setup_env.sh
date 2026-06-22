@@ -105,6 +105,60 @@ if [[ "$aws_choice" =~ ^[Yy]$ ]]; then
 fi
 prompt_optional "DEFAULT_FROM_EMAIL" DEFAULT_FROM_EMAIL "noreply@${APEX}"
 
+# ── Firebase (service-account key + optional extra env) ────────────────────────
+# The mobile API verifies Firebase ID tokens with a service-account key. The key
+# is a JSON *file* (git-ignored) that we copy into env/fbsvc.json; docker-compose
+# mounts it into the containers at /app/env/fbsvc.json, which is what
+# FIREBASE_CREDENTIALS points to below.
+echo ""
+echo "--- Firebase (service-account key for verifying mobile ID tokens) ---"
+FIREBASE_CREDENTIALS="/app/env/fbsvc.json"   # in-container path (see docker-compose mount)
+
+keep_existing=""
+if [[ -f env/fbsvc.json ]]; then
+    printf "env/fbsvc.json already exists. Replace it? [y/N]: "
+    read -r fb_replace
+    [[ "$fb_replace" =~ ^[Yy]$ ]] || { keep_existing="yes"; echo "  Keeping existing env/fbsvc.json."; }
+fi
+
+if [[ -z "$keep_existing" ]]; then
+    while true; do
+        prompt "Path to Firebase service-account JSON (copied into env/fbsvc.json)" FB_SRC
+        FB_SRC="${FB_SRC/#\~/$HOME}"          # expand a leading ~
+        if [[ ! -f "$FB_SRC" ]]; then
+            echo "  No file at: $FB_SRC — try again."
+            continue
+        fi
+        if ! python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$FB_SRC" 2>/dev/null; then
+            echo "  Not valid JSON: $FB_SRC — try again."
+            continue
+        fi
+        cp "$FB_SRC" env/fbsvc.json
+        chmod 600 env/fbsvc.json
+        echo "  Copied to env/fbsvc.json (mode 600)."
+        break
+    done
+fi
+
+# Any extra Firebase-related env vars (e.g. FIREBASE_PROJECT_ID). Optional and
+# free-form so the file can carry whatever the project needs without code edits.
+FIREBASE_EXTRA=""
+printf "Add extra Firebase env vars? [y/N]: "
+read -r fb_extra_choice
+if [[ "$fb_extra_choice" =~ ^[Yy]$ ]]; then
+    echo "Enter one KEY=VALUE per line; blank line to finish."
+    while true; do
+        printf "  > "
+        read -r kv
+        [[ -z "$kv" ]] && break
+        if [[ "$kv" != *=* || "$kv" == =* ]]; then
+            echo "    (expected KEY=VALUE — skipped)"
+            continue
+        fi
+        FIREBASE_EXTRA+="${kv}"$'\n'
+    done
+fi
+
 # ── First admin ───────────────────────────────────────────────────────────────
 echo ""
 echo "--- First admin (created on first container boot) ---"
@@ -137,6 +191,9 @@ AWS_STORAGE_BUCKET_NAME=${AWS_STORAGE_BUCKET_NAME}
 AWS_S3_REGION_NAME=${AWS_S3_REGION_NAME}
 DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL}
 
+# --- Firebase (service-account key mounted at this path; see docker-compose) ---
+FIREBASE_CREDENTIALS=${FIREBASE_CREDENTIALS}
+${FIREBASE_EXTRA}
 # --- First admin ---
 FIRST_ADMIN_USERNAME=${FIRST_ADMIN_USERNAME}
 FIRST_ADMIN_PASSWORD=${FIRST_ADMIN_PASSWORD}
@@ -146,13 +203,6 @@ EOF
 chmod 600 "$ENV_FILE"
 echo ""
 echo "Written to $ENV_FILE (mode 600)."
-
-# Firebase service-account key is a file, not an env var.
-if [[ ! -f env/fbsvc.json ]]; then
-    echo ""
-    echo "NOTE: env/fbsvc.json not found. The mobile API verifies Firebase ID tokens with"
-    echo "      a service-account key there (git-ignored) — or set FIREBASE_CREDENTIALS."
-fi
 
 echo ""
 echo "Next: 'make docker-deploy' to build and start the stack."
