@@ -54,10 +54,10 @@ server-clean:
 	@echo "Deleting default SQLite databases"
 	@cd src/server \
 		&& find . -type f -name "db.sqlite3" -exec rm -f {} +
-	@echo "Wiping PostgreSQL database wagon_db and dropping all tables..."
+	@echo "Wiping PostgreSQL database waygon_db and dropping all tables..."
 	@cd src/server \
-		&& psql -h localhost -p 5432 -U $(USER) -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='wagon_db' AND pid <> pg_backend_pid();" \
-		&& psql -h localhost -p 5432 -U $(USER) -d postgres -c "DROP DATABASE IF EXISTS wagon_db;" \
+		&& psql -h localhost -p 5432 -U $(USER) -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='waygon_db' AND pid <> pg_backend_pid();" \
+		&& psql -h localhost -p 5432 -U $(USER) -d postgres -c "DROP DATABASE IF EXISTS waygon_db;" \
 		&& psql -h localhost -p 5432 -U $(USER) -d postgres -c 'DROP OWNED BY admin CASCADE;' || true \
 		&& psql -h localhost -p 5432 -U $(USER) -d postgres -c 'DROP USER IF EXISTS admin;' || true
 
@@ -75,8 +75,8 @@ dev-db:
 	@cd src/server \
 		&& psql -h localhost -p 5432 -U $(USER) -d postgres -c "CREATE USER admin WITH PASSWORD 'changeme';" \
 		&& psql -h localhost -p 5432 -U $(USER) -d postgres -c "ALTER USER admin WITH SUPERUSER;" \
-		&& psql -h localhost -p 5432 -U $(USER) -d postgres -c "CREATE DATABASE wagon_db OWNER admin;" \
-		&& psql -h localhost -p 5432 -U $(USER) -d wagon_db -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+		&& psql -h localhost -p 5432 -U $(USER) -d postgres -c "CREATE DATABASE waygon_db OWNER admin;" \
+		&& psql -h localhost -p 5432 -U $(USER) -d waygon_db -c "CREATE EXTENSION IF NOT EXISTS postgis;"
 
 macos-env:
 	@echo "Setting up macOS development environment...\n"
@@ -88,12 +88,48 @@ macos-env:
 fake-data:
 	@echo "Setting up mock data...\n"
 	@cd src/server \
-		&& WAGON_SKIP_GOOGLE=1 printf "from core.fake import generate\ngenerate(40)\n" | uv run src/main.py shell
+		&& WAYGON_SKIP_GOOGLE=1 printf "from core.fake import generate\ngenerate(40)\n" | uv run src/main.py shell
 
 # --- Production (Docker on a DigitalOcean droplet) ---
+# Compose lives in docker/; run it from the repo root so the relative paths inside
+# (build context, env/.env.prod, docker/Caddyfile) resolve correctly.
+DC = docker compose -f docker/docker-compose.yml --project-directory . --env-file env/.env.prod
+
+.PHONY: prod-env deploy logs logs-web ps shell migrate down restart prune
+
+prod-env:
+	@echo "Building production env file (env/.env.prod)...\n"
+	@chmod +x bin/setup_env.sh
+	@./bin/setup_env.sh
+
 deploy:
 	@echo "Building and starting the production stack (docker compose)...\n"
-	@docker compose up -d --build
+	git pull --ff-only
+	$(DC) up -d --build
+	docker image prune -f
 
 logs:
-	@docker compose logs -f
+	$(DC) logs -f
+
+# Follow the Django app server (gunicorn): print() output, tracebacks, and access
+# logs. Override line count with TAIL=N (default 100).
+logs-web:
+	$(DC) logs -f --tail=$(or $(TAIL),100) web
+
+ps:
+	$(DC) ps
+
+shell:
+	$(DC) exec web uv run --no-sync src/main.py shell
+
+migrate:
+	$(DC) exec web uv run --no-sync src/main.py migrate
+
+down:
+	$(DC) down
+
+restart:
+	$(DC) restart
+
+prune:
+	docker image prune -f
