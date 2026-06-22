@@ -10,6 +10,7 @@
 # Not needed in the server image
 src/mobile
 docs
+docker
 env
 
 # Regenerated during the build
