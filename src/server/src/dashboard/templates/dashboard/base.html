@@ -14,6 +14,17 @@
             <meta name="keywords"
                   content="Django, Tailwind, CSS, Python, Web Development">
             <style>
+                /* Lock the document to the viewport so only the inner content
+                   section scrolls — prevents the whole-window rubber-band on
+                   macOS Chrome/Safari that stretches the in-flow <header> while
+                   the position:fixed <nav> stays pinned, desyncing the two. */
+                html,
+                body {
+                    height: 100%;
+                    overflow: hidden;
+                    overscroll-behavior: none;
+                }
+
                 /* Loader base layout */
                 #page-loader {
                     position: fixed;

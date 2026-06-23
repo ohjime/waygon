@@ -1,19 +1,20 @@
 {% comment %}
-A single sidebar nav link for <c-navbar>: an icon that's always visible plus a
-label that fades/expands in when the sidebar opens. The default slot is the
-inner <path …/> of a 0 -960 960 960 viewBox icon.
+A single sidebar nav link. The icon (default slot = the inner <path …/> of a
+0 -960 960 960 viewBox SVG) is always visible; the label fades/expands in when
+the sidebar opens.
 
-    <c-navbar.item label="Trips" url="{% url 'trips_index' %}" target="#content">
+    <c-nav-item label="Trips" url="{% url 'trips_index' %}" target="#content">
         <path d="…" />
-    </c-navbar.item>
+    </c-nav-item>
 
-`url` + `target` wire an htmx innerHTML swap. Omit `target` for a plain link
-(full navigation via href).
+`url` + `target` wire an htmx innerHTML swap; omit `target` for a plain link
+(full navigation via href). `section` overrides the temp-state section key
+(defaults to `url`) — items sharing a key are treated as one section by the
+press-to-collapse behaviour on the parent <c-navbar>.
 {% endcomment %}
-<c-vars label="" url="#" target="" />
-<li>
+<c-vars label="" url="#" target="" section="" />
+<li data-nav-section="{{ section|default:url }}">
     <a {% if target %}hx-get="{{ url }}" hx-target="{{ target }}" hx-swap="innerHTML"{% else %}href="{{ url }}"{% endif %}
-       data-nav-section="{{ url }}"
        @click="selectItem($el)"
        @mouseenter="itemEnter($el)"
        @mouseleave="itemLeave()"

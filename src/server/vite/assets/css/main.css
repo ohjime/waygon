@@ -15,3 +15,10 @@
 @theme {
     --font-sans: 'Helvetica Neue', Arial, sans-serif;
 }
+
+/* Hide Alpine-cloaked elements until Alpine initializes. Defined globally so
+   every page gets it (some components also declare it locally). Without this,
+   x-show overlays like the mobile nav flash open on first paint. */
+[x-cloak] {
+    display: none !important;
+}
